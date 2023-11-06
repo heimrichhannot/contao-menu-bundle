@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.6] - 2023-11-02
+- Added: encore contracts support
+
 ## [0.5.5] - 2022-02-14
 
 - Fixed: array index issues in php 8+

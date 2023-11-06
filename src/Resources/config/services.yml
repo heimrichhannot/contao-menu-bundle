@@ -3,4 +3,7 @@ services:
     public: true
     autowire: true
 
+  HeimrichHannot\MenuBundle\Asset\EncoreExtension:
+    autoconfigure: true
+
   HeimrichHannot\MenuBundle\EventListener\Contao\LoadDataContainerListener: ~

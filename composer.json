@@ -22,7 +22,8 @@
     "require": {
         "php": "^7.1||^8.0",
         "contao/core-bundle": "^4.4",
-        "heimrichhannot/contao-utils-bundle": "^2.116"
+        "heimrichhannot/contao-utils-bundle": "^2.116",
+        "heimrichhannot/contao-encore-contracts": "^1.0"
     },
     "require-dev": {
         "contao/test-case": "1.1.*",
@@ -56,7 +57,6 @@
         "preferred-install": "dist"
     },
     "extra": {
-        "contao-manager-plugin": "HeimrichHannot\\MenuBundle\\ContaoManager\\Plugin",
-        "foxy": true
+        "contao-manager-plugin": "HeimrichHannot\\MenuBundle\\ContaoManager\\Plugin"
     }
 }

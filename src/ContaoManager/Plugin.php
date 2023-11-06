@@ -13,7 +13,7 @@ use HeimrichHannot\UtilsBundle\Container\ContainerUtil;
 use Contao\ManagerPlugin\Config\ConfigPluginInterface;
 use Symfony\Component\Config\Loader\LoaderInterface;
 
-class Plugin implements BundlePluginInterface, ExtensionPluginInterface, ConfigPluginInterface
+class Plugin implements BundlePluginInterface, ConfigPluginInterface
 {
     /**
      * {@inheritdoc}
@@ -23,21 +23,6 @@ class Plugin implements BundlePluginInterface, ExtensionPluginInterface, ConfigP
         return [
             BundleConfig::create(ContaoMenuBundle::class)->setLoadAfter([ContaoCoreBundle::class]),
         ];
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getExtensionConfig($extensionName, array $extensionConfigs, ContainerBuilder $container)
-    {
-        $extensionConfigs = ContainerUtil::mergeConfigFile(
-            'huh_encore',
-            $extensionName,
-            $extensionConfigs,
-            __DIR__ . '/../Resources/config/config_encore.yml'
-        );
-
-        return $extensionConfigs;
     }
 
     /**
