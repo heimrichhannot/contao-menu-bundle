@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.7] - 2024-01-30
+- Fixed: avoid access on null object
+
 ## [0.5.6] - 2023-11-02
 - Added: encore contracts support
 
