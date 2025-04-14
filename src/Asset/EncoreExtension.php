@@ -12,13 +12,13 @@ namespace HeimrichHannot\MenuBundle\Asset;
 
 use HeimrichHannot\EncoreContracts\EncoreEntry;
 use HeimrichHannot\EncoreContracts\EncoreExtensionInterface;
-use HeimrichHannot\MenuBundle\ContaoMenuBundle;
+use HeimrichHannot\MenuBundle\HeimrichHannotContaoMenuBundle;
 
 class EncoreExtension implements EncoreExtensionInterface
 {
     public function getBundle(): string
     {
-        return ContaoMenuBundle::class;
+        return HeimrichHannotContaoMenuBundle::class;
     }
 
     public function getEntries(): array

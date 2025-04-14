@@ -20,9 +20,8 @@
         "issues": "https://github.com/heimrichhannot/contao-menu-bundle/issues"
     },
     "require": {
-        "php": "^7.1||^8.0",
-        "contao/core-bundle": "^4.4",
-        "heimrichhannot/contao-utils-bundle": "^2.116",
+        "php": "^8.0",
+        "contao/core-bundle": "^5.0",
         "heimrichhannot/contao-encore-contracts": "^1.0"
     },
     "require-dev": {

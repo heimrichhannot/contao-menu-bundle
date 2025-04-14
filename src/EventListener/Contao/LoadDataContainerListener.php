@@ -2,33 +2,31 @@
 
 namespace HeimrichHannot\MenuBundle\EventListener\Contao;
 
-use HeimrichHannot\UtilsBundle\Container\ContainerUtil;
+use Contao\CoreBundle\Routing\ScopeMatcher;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 class LoadDataContainerListener {
     /**
-     * @var ContainerUtil
+     * @var RequestStack
      */
-    private $containerUtil;
+    protected $requestStack;
 
-    public function __construct(ContainerUtil $containerUtil)
+    /**
+     * @var ScopeMatcher
+     */
+    protected $scopeMatcher;
+
+    public function __construct(RequestStack $requestStack, ScopeMatcher $scopeMatcher)
     {
-        $this->containerUtil = $containerUtil;
+        $this->requestStack = $requestStack;
+        $this->scopeMatcher = $scopeMatcher;
     }
 
     public function __invoke($table)
     {
-        /**
-         * JS
-         */
-        if ($this->containerUtil->isFrontend()) {
-            $GLOBALS['TL_JAVASCRIPT']['contao-menu-bundle'] = 'bundles/contaomenu/contao-menu-bundle.js';
-        }
-
-        /**
-         * CSS
-         */
-        if ($this->containerUtil->isFrontend()) {
-            $GLOBALS['TL_CSS']['contao-menu-bundle'] = 'bundles/contaomenu/contao-menu-bundle.css';
+        if ($this->requestStack->getCurrentRequest() !== null && $this->scopeMatcher->isFrontendRequest($this->requestStack->getCurrentRequest())) {
+            $GLOBALS['TL_JAVASCRIPT']['contao-menu-bundle'] = 'bundles/heimrichhannotcontaomenu/contao-menu-bundle.js';
+            $GLOBALS['TL_CSS']['contao-menu-bundle'] = 'bundles/heimrichhannotcontaomenu/contao-menu-bundle.css';
         }
     }
 }
