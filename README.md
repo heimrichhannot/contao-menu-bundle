@@ -6,6 +6,7 @@ This bundle adds a multi-level menu module for the Contao CMS.
 
 - submenus are opened by hovering (or by tapping on touch devices)
 - works both for mouse and for touch-based devices
+- includes a preset template for bootstrap 4 (`nav_huh_menu_bs4`) and 5 (`nav_huh_menu_bs5`)
 - define how many levels are collapsed
 - define delays for opening and closing submenus
 
