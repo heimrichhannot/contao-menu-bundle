@@ -6,7 +6,7 @@ This bundle adds a multi-level menu module for the Contao CMS.
 
 - submenus are opened by hovering (or by tapping on touch devices)
 - works both for mouse and for touch-based devices
-- includes a preset template for bootstrap 4 (`nav_huh_menu_bs4`)
+- includes a preset template for bootstrap 4 (`nav_huh_menu_bs4`) and 5 (`nav_huh_menu_bs5`)
 - define how many levels are collapsed
 - define delays for opening and closing submenus
 
@@ -16,6 +16,14 @@ The menu is based on the `mouseover` event ("hover"). This way it works for both
 on most touch devices.
 
 On devices with `window.navigator.maxTouchPoints` being 0, you can also click the submenu headers because submenus are opened by hovering.
+
+## Usage
+
+1. Install the bundle via composer: `composer require heimrichhannot/contao-menu-bundle`
+2. Update the database
+3. Create a new module of type Menu (H&H)
+4. Set the template nav_huh_menu_default to the module
+5. Assign it to your layout (preferably in the header)
 
 ## Technical notes
 

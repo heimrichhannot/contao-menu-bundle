@@ -8,11 +8,16 @@
 
 namespace HeimrichHannot\MenuBundle\FrontendModule;
 
+use Contao\CoreBundle\Security\ContaoCorePermissions;
+use Contao\Database;
+use Contao\Date;
+use Contao\Environment;
 use Contao\FrontendTemplate;
 use Contao\ModuleSitemap;
 use Contao\PageModel;
 use Contao\StringUtil;
 use Contao\System;
+use Symfony\Component\Routing\Exception\ExceptionInterface;
 
 trait NavigationTrait
 {
@@ -25,160 +30,185 @@ trait NavigationTrait
         }
 
         // Get all active subpages
-        $objSubpages = \PageModel::findPublishedSubpagesWithoutGuestsByPid($pid, $this->showHidden, $this instanceof ModuleSitemap);
+        $arrSubpages = static::getPublishedSubpagesByPid($pid, $this->showHidden, $this instanceof ModuleSitemap);
 
-        if (null === $objSubpages) {
+        if ($arrSubpages === null) {
             return '';
         }
 
-        $items = [];
-        $groups = [];
+        $items              = [];
+        $security           = System::getContainer()->get('security.helper');
+        $isMember           = $security->isGranted('ROLE_MEMBER');
+        $blnShowUnpublished = System::getContainer()->get('contao.security.token_checker')->isPreviewMode();
 
-        // Get all groups of the current front end user
-        if (FE_USER_LOGGED_IN) {
-            $this->import('FrontendUser', 'User');
-            $groups = $this->User->groups;
-        }
+        $objTemplate         = new FrontendTemplate($this->navigationTpl ?: 'nav_default');
 
-        $groups = \is_array($groups) ? $groups : [];
-
-        // Layout template fallback
-        if ('' == $this->navigationTpl) {
-            $this->navigationTpl = 'nav_default';
-        }
-
-        /** @var FrontendTemplate|object $objTemplate */
-        $objTemplate = new \FrontendTemplate($this->navigationTpl);
-
+        // TODO: test this
         if (isset($module) && \is_array($module)) {
             $objTemplate->setData($module->arrData);
         }
 
-        $objTemplate->pid = $pid;
-        $objTemplate->type = static::class;
-        $objTemplate->cssID = $this->cssID; // see #4897
-        $objTemplate->level = 'level_'.$level++;
+        $objTemplate->pid    = $pid;
+        $objTemplate->type   = static::class;
+        $objTemplate->cssID  = $this->cssID; // see #4897
+        $objTemplate->level  = 'level_' . $level++;
+        $objTemplate->module = $this; // see #155
 
-        /* @var PageModel $objPage */
+        $db           = Database::getInstance();
+        $urlGenerator = System::getContainer()->get('contao.routing.content_url_generator');
+
         global $objPage;
 
         // Browse subpages
-        foreach ($objSubpages as $objSubpage) {
+        foreach ($arrSubpages as ['page' => $objSubpage, 'hasSubpages' => $blnHasSubpages]) {
             // Skip hidden sitemap pages
-            if ($this instanceof ModuleSitemap && 'map_never' == $objSubpage->sitemap) {
+            if ($this instanceof ModuleSitemap && $objSubpage->sitemap == 'map_never') {
+                continue;
+            }
+
+            $objSubpage->loadDetails();
+
+            // Override the domain (see #3765)
+            if ($host !== null) {
+                $objSubpage->domain = $host;
+            }
+
+            // Hide the page if it is only visible to guests
+            if ($objSubpage->guests && $isMember) {
                 continue;
             }
 
             $subitems = '';
-            $_groups = StringUtil::deserialize($objSubpage->groups, true);
 
-            // Override the domain (see #3765)
-            if (null !== $host) {
-                $objSubpage->domain = $host;
-            }
-
-            // Do not show protected pages unless a front end user is logged in
-            if (!$objSubpage->protected || (\is_array($_groups) && \count(array_intersect($_groups, $groups))) || $this->showProtected || ($this instanceof ModuleSitemap && 'map_always' == $objSubpage->sitemap)) {
+            // PageModel->groups is an array after calling loadDetails()
+            if (!$objSubpage->protected || $this->showProtected || ($this instanceof ModuleSitemap && $objSubpage->sitemap == 'map_always') || $security->isGranted(ContaoCorePermissions::MEMBER_IN_GROUPS, $objSubpage->groups)) {
                 // Check whether there will be subpages
-                if ($objSubpage->subpages > 0 && (!$this->showLevel || $this->showLevel >= $level || (!$this->hardLimit && ($objPage->id == $objSubpage->id || \in_array($objPage->id, $this->Database->getChildRecords($objSubpage->id, 'tl_page')))))) {
+                if ($blnHasSubpages && (!$this->showLevel || $this->showLevel >= $level || (!$this->hardLimit && ($objPage->id == $objSubpage->id || \in_array($objPage->id, $db->getChildRecords($objSubpage->id, 'tl_page')))))) {
                     $subitems = $this->renderNavigation($objSubpage->id, $level, $host, $language);
                 }
 
-                $href = null;
-
-                // Get href
-                switch ($objSubpage->type) {
-                    case 'redirect':
-                        $href = $objSubpage->url;
-
-                        if (0 === strncasecmp($href, 'mailto:', 7)) {
-                            $href = \StringUtil::encodeEmail($href);
-                        }
-
-                        break;
-
-                    case 'forward':
-                        if ($objSubpage->jumpTo) {
-                            /** @var PageModel $objNext */
-                            $objNext = $objSubpage->getRelated('jumpTo');
-                        } else {
-                            $objNext = \PageModel::findFirstPublishedRegularByPid($objSubpage->id);
-                        }
-
-                        if (null !== $objNext) {
-                            $isInvisible = !$objNext->published || ('' != $objNext->start && $objNext->start > time()) || ('' != $objNext->stop && $objNext->stop < time());
-                        }
-
-                        // Hide the link if the target page is invisible
-                        if (!$objNext instanceof PageModel || ($isInvisible && !BE_USER_LOGGED_IN)) {
-                            continue 2;
-                        }
-
-                        $href = $objNext->getFrontendUrl();
-
-                        break;
-
-                    default:
-                        $href = $objSubpage->getFrontendUrl();
-
-                        break;
-                }
-
-                $row = $objSubpage->row();
-                $trail = \in_array($objSubpage->id, $objPage->trail);
-
-                // Use the path without query string to check for active pages (see #480)
-                [$path] = explode('?', \Environment::get('request'), 2);
-
-                // Active page
-                if (($objPage->id == $objSubpage->id || ('forward' == $objSubpage->type && $objPage->id == $objSubpage->jumpTo)) && !($this instanceof ModuleSitemap) && $href == $path) {
-                    // Mark active forward pages (see #4822)
-                    $strClass = (('forward' == $objSubpage->type && $objPage->id == $objSubpage->jumpTo) ? 'forward'.($trail ? ' trail' : '') : 'active').(('' != $subitems) ? ' submenu' : '').($objSubpage->protected ? ' protected' : '').(('' != $objSubpage->cssClass) ? ' '.$objSubpage->cssClass : '');
-
-                    $row['isActive'] = true;
-                    $row['isTrail'] = false;
-                } // Regular page
-                else {
-                    $strClass = (('' != $subitems) ? 'submenu' : '').($objSubpage->protected ? ' protected' : '').($trail ? ' trail' : '').(('' != $objSubpage->cssClass) ? ' '.$objSubpage->cssClass : '');
-
-                    // Mark pages on the same level (see #2419)
-                    if ($objSubpage->pid == $objPage->pid) {
-                        $strClass .= ' sibling';
+                if ($objSubpage->type == 'forward') {
+                    if ($objSubpage->jumpTo) {
+                        $objNext = PageModel::findPublishedById($objSubpage->jumpTo);
+                    } else {
+                        $objNext = PageModel::findFirstPublishedRegularByPid($objSubpage->id);
                     }
 
-                    $row['isActive'] = false;
-                    $row['isTrail'] = $trail;
+                    // Hide the link if the target page is invisible
+                    if (!$objNext instanceof PageModel || (!$objNext->loadDetails()->isPublic && !$blnShowUnpublished)) {
+                        continue;
+                    }
                 }
 
-                $row['subitems'] = $subitems;
-                $row['class'] = trim($strClass);
-                $row['title'] = \StringUtil::specialchars($objSubpage->title, true);
-                $row['pageTitle'] = \StringUtil::specialchars($objSubpage->pageTitle, true);
-                $row['link'] = $objSubpage->title;
-                $row['href'] = $href;
-                $row['nofollow'] = (0 === strncmp($objSubpage->robots, 'noindex,nofollow', 16));
-                $row['target'] = '';
-                $row['description'] = str_replace(["\n", "\r"], [' ', ''], $objSubpage->description);
-
-                // Override the link target
-                if ('redirect' == $objSubpage->type && $objSubpage->target) {
-                    $row['target'] = ' target="_blank"';
+                try {
+                    $href = $urlGenerator->generate($objSubpage);
+                } catch (ExceptionInterface) {
+                    continue;
                 }
 
-                $items[] = $row;
+                if (str_starts_with($href, 'mailto:')) {
+                    $href = StringUtil::encodeEmail($href);
+                }
+
+                $items[] = $this->compileNavigationRow($objPage, $objSubpage, $subitems, $href);
             }
-        }
-
-        // Add classes first and last
-        if (!empty($items)) {
-            $last = \count($items) - 1;
-
-            $items[0]['class'] = trim($items[0]['class'].' first');
-            $items[$last]['class'] = trim($items[$last]['class'].' last');
         }
 
         $objTemplate->items = $items;
 
         return !empty($items) ? $objTemplate->parse() : '';
+    }
+
+    protected function compileNavigationRow(PageModel $objPage, PageModel $objSubpage, $subitems, $href)
+    {
+        $row   = $objSubpage->row();
+        $trail = \in_array($objSubpage->id, $objPage->trail);
+
+        // Use the path without query string to check for active pages (see #480)
+        [$path] = explode('?', Environment::get('requestUri'), 2);
+
+        // Active page
+        if (($objPage->id == $objSubpage->id || ($objSubpage->type == 'forward' && $objPage->id == $objSubpage->jumpTo)) && !($this instanceof ModuleSitemap) && $href == $path) {
+            // Mark active forward pages (see #4822)
+            $strClass = (($objSubpage->type == 'forward' && $objPage->id == $objSubpage->jumpTo) ? 'forward' . ($trail ? ' trail' : '') : 'active') . ($subitems ? ' submenu' : '') . ($objSubpage->protected ? ' protected' : '') . ($objSubpage->cssClass ? ' ' . $objSubpage->cssClass : '');
+
+            $row['isActive'] = true;
+            $row['isTrail']  = false;
+        } // Regular page
+        else {
+            $strClass = ($subitems ? 'submenu' : '') . ($objSubpage->protected ? ' protected' : '') . ($trail ? ' trail' : '') . ($objSubpage->cssClass ? ' ' . $objSubpage->cssClass : '');
+
+            // Mark pages on the same level (see #2419)
+            if ($objSubpage->pid == $objPage->pid) {
+                $strClass .= ' sibling';
+            }
+
+            $row['isActive'] = false;
+            $row['isTrail']  = $trail;
+        }
+
+        $row['subitems']    = $subitems;
+        $row['class']       = trim($strClass);
+        $row['title']       = StringUtil::specialchars($objSubpage->title, true);
+        $row['pageTitle']   = StringUtil::specialchars($objSubpage->pageTitle, true);
+        $row['link']        = $objSubpage->title;
+        $row['href']        = $href;
+        $row['rel']         = '';
+        $row['target']      = '';
+        $row['description'] = str_replace(["\n", "\r"], [' ', ''], (string)$objSubpage->description);
+
+        $arrRel = [];
+
+        // Override the link target
+        if ($objSubpage->type == 'redirect' && $objSubpage->target) {
+            $arrRel[] = 'noreferrer';
+            $arrRel[] = 'noopener';
+
+            $row['target'] = ' target="_blank"';
+        }
+
+        // Set the rel attribute
+        if (!empty($arrRel)) {
+            $row['rel'] = ' rel="' . implode(' ', $arrRel) . '"';
+        }
+
+        // Tag the page
+        if (System::getContainer()->has('fos_http_cache.http.symfony_response_tagger')) {
+            $responseTagger = System::getContainer()->get('fos_http_cache.http.symfony_response_tagger');
+            $responseTagger->addTags(['contao.db.tl_page.' . $objSubpage->id]);
+        }
+
+        return $row;
+    }
+
+    protected static function getPublishedSubpagesByPid($intPid, $blnShowHidden = false, $blnIsSitemap = false): array|null
+    {
+        $time              = Date::floorToMinute();
+        $tokenChecker      = System::getContainer()->get('contao.security.token_checker');
+        $blnBeUserLoggedIn = $tokenChecker->isPreviewMode();
+        $unroutableTypes   = System::getContainer()->get('contao.routing.page_registry')->getUnroutableTypes();
+
+        $arrPages = Database::getInstance()->prepare("SELECT p1.id, EXISTS(SELECT * FROM tl_page p2 WHERE p2.pid=p1.id AND p2.type!='root' AND p2.type NOT IN ('" . implode("', '",
+                $unroutableTypes) . "')" . (!$blnShowHidden ? ($blnIsSitemap ? " AND (p2.hide=0 OR sitemap='map_always')" : " AND p2.hide=0") : "") . (!$blnBeUserLoggedIn ? " AND p2.published=1 AND (p2.start='' OR p2.start<=$time) AND (p2.stop='' OR p2.stop>$time)" : "") . ") AS hasSubpages FROM tl_page p1 WHERE p1.pid=? AND p1.type!='root' AND p1.type NOT IN ('" . implode("', '",
+                $unroutableTypes) . "')" . (!$blnShowHidden ? ($blnIsSitemap ? " AND (p1.hide=0 OR sitemap='map_always')" : " AND p1.hide=0") : "") . (!$blnBeUserLoggedIn ? " AND p1.published=1 AND (p1.start='' OR p1.start<=$time) AND (p1.stop='' OR p1.stop>$time)" : "") . " ORDER BY p1.sorting")
+            ->execute($intPid)
+            ->fetchAllAssoc();
+
+        if (\count($arrPages) < 1) {
+            return null;
+        }
+
+        // Load models into the registry with a single query
+        PageModel::findMultipleByIds(array_column($arrPages, 'id'));
+
+        return array_map(
+            static function (array $row): array {
+                return [
+                    'page'        => PageModel::findById($row['id']),
+                    'hasSubpages' => (bool)$row['hasSubpages'],
+                ];
+            },
+            $arrPages
+        );
     }
 }

@@ -1,3 +1,4 @@
+
 <?php if ($this->level === 'level_1'): ?>
 <div class="navbar d-none d-lg-block navbar-expand-lg navbar-light bg-light">
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-content-<?= $this->id ?>" aria-controls="navbar-content-<?= $this->id ?>" aria-expanded="false" aria-label="Toggle navigation">
@@ -10,23 +11,19 @@
 <ul class="<?= $this->level ?><?php if ($this->level === 'level_1'): ?> navbar-nav mr-auto<?php endif; ?>">
     <?php foreach ($this->items as $item): ?>
         <li class="nav-item<?= $item['class'] ? ' ' . $item['class'] : '' ?>">
-            <a href="<?= $item['href'] ?: './' ?>"
-               title="<?= $item['pageTitle'] ?: $item['title'] ?>"
+            <a href="<?= $item['href'] ?>"
                class="nav-link<?= $item['class'] ? ' ' . $item['class'] : '' ?>"
-               <?php if ($item['accesskey'] !== '') echo ' accesskey="' . $item['accesskey'] . '"'; ?>
-               <?php if ($item['tabindex']) echo ' tabindex="' . $item['tabindex'] . '"'; ?>
-               <?php if ($item['nofollow']) echo ' rel="nofollow"'; ?>
-               <?= $item['target'] ?>
-               <?php if (!empty($item['subitems'])) echo ' aria-haspopup="true"'; ?>
-               itemprop="url">
-                <span itemprop="name"><?= $item['link'] ?></span>
+                <?php if ('' !== $item['accesskey']): ?> accesskey="<?= $item['accesskey'] ?>"<?php endif; ?>
+                <?= $item['target'] ?>
+                <?= $item['rel'] ?? '' ?>
+                <?php if (!empty($item['subitems'])): ?> aria-haspopup="true"<?php endif; ?>>
+                <?= $item['link'] ?>
             </a>
-            <?= $item['subitems'] ?>
-        </li>
+            <?= $item['subitems'] ?? '' ?></li>
     <?php endforeach; ?>
 </ul>
 
 <?php if ($this->level === 'level_1'): ?>
     </div>
-</div>
+    </div>
 <?php endif; ?>

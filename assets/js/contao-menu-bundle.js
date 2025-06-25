@@ -1,5 +1,3 @@
-import '@hundh/contao-utils-bundle';
-
 class MenuBundle {
 
     static init() {
@@ -132,6 +130,23 @@ class MenuBundle {
         });
     }
 
+    static getAllParentNodes(node) {
+        var parents = [];
+
+        while (node) {
+            parents.unshift(node);
+            node = node.parentNode;
+        }
+
+        for (var i = 0; i < parents.length; i++) {
+            if (parents[i] === document) {
+                parents.splice(i, 1);
+            }
+        }
+
+        return parents;
+    }
+
     static openSubmenu(menu, link) {
         let openDelay = menu.getAttribute('data-open-delay') ? menu.getAttribute('data-open-delay') : 0,
             openingDuration = menu.getAttribute('data-opening-duration') ? menu.getAttribute('data-opening-duration') : 0;
@@ -162,7 +177,7 @@ class MenuBundle {
 
                 let openedParents = [];
 
-                utilsBundle.dom.getAllParentNodes(link).forEach((element) => {
+                MenuBundle.getAllParentNodes(link).forEach((element) => {
                     if (element.classList.contains('open')) {
                         openedParents.push(element);
                     }

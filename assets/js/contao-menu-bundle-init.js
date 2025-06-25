@@ -1,4 +1,4 @@
-require('../scss/contao-menu-bundle.scss');
+require('../css/contao-menu-bundle.css');
 
 import { MenuBundle } from './contao-menu-bundle';
 

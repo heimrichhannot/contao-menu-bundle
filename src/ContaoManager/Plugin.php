@@ -6,10 +6,7 @@ use Contao\CoreBundle\ContaoCoreBundle;
 use Contao\ManagerPlugin\Bundle\BundlePluginInterface;
 use Contao\ManagerPlugin\Bundle\Config\BundleConfig;
 use Contao\ManagerPlugin\Bundle\Parser\ParserInterface;
-use Contao\ManagerPlugin\Config\ContainerBuilder;
-use Contao\ManagerPlugin\Config\ExtensionPluginInterface;
-use HeimrichHannot\MenuBundle\ContaoMenuBundle;
-use HeimrichHannot\UtilsBundle\Container\ContainerUtil;
+use HeimrichHannot\MenuBundle\HeimrichHannotContaoMenuBundle;
 use Contao\ManagerPlugin\Config\ConfigPluginInterface;
 use Symfony\Component\Config\Loader\LoaderInterface;
 
@@ -21,7 +18,7 @@ class Plugin implements BundlePluginInterface, ConfigPluginInterface
     public function getBundles(ParserInterface $parser)
     {
         return [
-            BundleConfig::create(ContaoMenuBundle::class)->setLoadAfter([ContaoCoreBundle::class]),
+            BundleConfig::create(HeimrichHannotContaoMenuBundle::class)->setLoadAfter([ContaoCoreBundle::class]),
         ];
     }
 
@@ -30,6 +27,6 @@ class Plugin implements BundlePluginInterface, ConfigPluginInterface
      */
     public function registerContainerConfiguration(LoaderInterface $loader, array $managerConfig)
     {
-        $loader->load('@ContaoMenuBundle/Resources/config/services.yml');
+        $loader->load('@HeimrichHannotContaoMenuBundle/config/services.yaml');
     }
 }

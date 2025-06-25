@@ -10,6 +10,8 @@ namespace HeimrichHannot\MenuBundle\FrontendModule;
 
 use Contao\BackendTemplate;
 use Contao\ModuleCustomnav;
+use Contao\StringUtil;
+use Contao\System;
 
 class CustomMenuModule extends ModuleCustomnav
 {
@@ -18,22 +20,22 @@ class CustomMenuModule extends ModuleCustomnav
 
     public function generate()
     {
-        if (TL_MODE == 'BE') {
-            /** @var BackendTemplate|object $objTemplate */
-            $objTemplate = new \BackendTemplate('be_wildcard');
+        $request = System::getContainer()->get('request_stack')->getCurrentRequest();
 
-            $objTemplate->wildcard = '### '.$GLOBALS['TL_LANG']['FMD'][$this->type][0].' ###';
-            $objTemplate->title = $this->headline;
-            $objTemplate->id = $this->id;
-            $objTemplate->link = $this->name;
-            $objTemplate->href = 'contao/main.php?do=themes&amp;table=tl_module&amp;act=edit&amp;id='.$this->id;
+        if ($request && System::getContainer()->get('contao.routing.scope_matcher')->isBackendRequest($request)) {
+            $objTemplate           = new BackendTemplate('be_wildcard');
+            $objTemplate->wildcard = '### ' . $GLOBALS['TL_LANG']['FMD'][$this->type][0] . ' ###';
+            $objTemplate->title    = $this->headline;
+            $objTemplate->id       = $this->id;
+            $objTemplate->link     = $this->name;
+            $objTemplate->href     = StringUtil::specialcharsUrl(System::getContainer()->get('router')->generate('contao_backend', ['do' => 'themes', 'table' => 'tl_module', 'act' => 'edit', 'id' => $this->id]));
 
             return $objTemplate->parse();
         }
 
         $strBuffer = parent::generate();
 
-        return ('' != $this->Template->items) ? $strBuffer : '';
+        return $this->Template->items ? $strBuffer : '';
     }
 
     protected function compile()
