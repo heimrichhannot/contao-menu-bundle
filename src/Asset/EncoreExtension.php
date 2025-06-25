@@ -24,7 +24,7 @@ class EncoreExtension implements EncoreExtensionInterface
     public function getEntries(): array
     {
         return [
-            EncoreEntry::create('contao-menu-bundle', 'src/Resources/assets/js/contao-menu-bundle-init.js')
+            EncoreEntry::create('contao-menu-bundle', 'assets/js/contao-menu-bundle-init.js')
                 ->setRequiresCss(true)
                 ->addCssEntryToRemoveFromGlobals('contao-menu-bundle')
                 ->addJsEntryToRemoveFromGlobals('contao-menu-bundle'),
